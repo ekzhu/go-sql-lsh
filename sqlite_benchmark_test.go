@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -26,23 +27,27 @@ func removeTempFileBench(t *testing.B, tempfile *os.File) {
 	}
 }
 
-func runInsert(k, l int, b *testing.B) {
-	sigs := randomSigs(b.N, k*l, math.MaxFloat64)
+func runSqlite(k, l, n, nq int, b *testing.B) {
+	// Inialize database
 	f := creatTempFileBench(b)
 	db, err := sql.Open("sqlite3", f.Name())
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	// Initalize data
 	lsh, err := NewSqliteLsh(k, l, "lshtable", db)
 	if err != nil {
 		b.Fatal(err)
 	}
+	sigs := randomSigs(n, k*l, math.MaxFloat64)
 	ids := make([]int, len(sigs))
 	for i := range sigs {
 		ids[i] = i
 	}
-	b.ResetTimer()
+	qids := rand.Perm(len(ids))[:nq]
 
+	// Inserting
 	start := time.Now()
 	err = lsh.BatchInsert(ids, sigs)
 	if err != nil {
@@ -50,25 +55,45 @@ func runInsert(k, l int, b *testing.B) {
 	}
 	dur := float64(time.Now().Sub(start)) / float64(time.Second)
 	log.Printf("Batch inserting %d signatures takes %.4f seconds", len(sigs), dur)
+
+	// Indexing
 	start = time.Now()
 	lsh.Index()
-	dur = float64(time.Now().Sub(start)) / float64(time.Second)
-	log.Printf("Building index takes %.4f seconds", dur)
 	if err != nil {
 		b.Fatal(err)
 	}
+	dur = float64(time.Now().Sub(start)) / float64(time.Second)
+	log.Printf("Building index takes %.4f seconds", dur)
+
+	// Query
+	start = time.Now()
+	for _, i := range qids {
+		out := make(chan int)
+		go func() {
+			err := lsh.Query(sigs[i], out)
+			if err != nil {
+				b.Error(err)
+			}
+			close(out)
+		}()
+		for _ = range out {
+		}
+	}
+	dur = float64(time.Now().Sub(start)) / float64(time.Second)
+	log.Printf("%d queries takes %.4f seconds, average %.4f seconds / query",
+		len(qids), dur, dur/float64(nq))
 
 	removeTempFileBench(b, f)
 }
 
 func BenchmarkSqliteLsh128(b *testing.B) {
-	runInsert(2, 64, b)
+	runSqlite(2, 64, 10000, 100, b)
 }
 
 func BenchmarkSqliteLsh256(b *testing.B) {
-	runInsert(4, 64, b)
+	runSqlite(4, 64, 10000, 100, b)
 }
 
 func BenchmarkSqliteLsh512(b *testing.B) {
-	runInsert(8, 64, b)
+	runSqlite(8, 64, 10000, 100, b)
 }

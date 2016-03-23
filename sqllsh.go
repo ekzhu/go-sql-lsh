@@ -1,3 +1,20 @@
+// Package sqllsh provides an on-disk alternative to in-memory LSH index,
+// using relational databases.
+// This package does not implement any specific locality-sensitive
+// hash function family
+// (e.g. MinHash, Random Hyperplane Projection, p-Stable Distribution Projection, etc.).
+// It lets you store the hash values with the k and l parameters.
+// where k is the number of hash values that form one hash key,
+// and l is the number of hash tables that uses the hash keys.
+// For detail of the algorithm one can read this book chapter:
+// http://infolab.stanford.edu/~ullman/mmds/ch3.pdf
+//
+// Inside a relational database, an LSH index is a table,
+// each Signature is a row, and each locality-sensitive hash function's hash values
+// form a column.
+// During query, collisons of hash keys are checked using AND and OR.
+// A B-Tree multi-column index can be built for each hash key
+// to improve query performance.
 package sqllsh
 
 import (
@@ -7,21 +24,25 @@ import (
 	"strings"
 )
 
+// Signature is a list of integer hash values from
+// their corresponding locality-sensitive hash functions.
+// Since this library does not include the hash functions,
+// the hash values are used directly as input.
 type Signature []uint
 
+// SqlLsh is the entry point to the on-disk LSH index.
 type SqlLsh struct {
-	k          int     // Hash key size, or size of a multi-column index
-	l          int     // Number of hash tables, or number of multi-column indexes
-	tableName  string  // Name of the database table used
-	db         *sql.DB // Database connection
-	varFmt     func(int) string
+	k          int              // Hash key size
+	l          int              // Number of hash tables, or number of hash keys
+	tableName  string           // Name of the database table used
+	db         *sql.DB          // Database connection
+	varFmt     func(int) string // Database specific formatter for placehoder
 	insertStmt *sql.Stmt
 	queryStmt  *sql.Stmt
 	indexStmts []*sql.Stmt
 }
 
-// NewSqlLsh creates a new LSH index using SQL and multi-column indexes
-func NewSqlLsh(k, l int, tableName string, db *sql.DB, varFmt func(int) string) (*SqlLsh, error) {
+func newSqlLsh(k, l int, tableName string, db *sql.DB, varFmt func(int) string) (*SqlLsh, error) {
 	lsh := &SqlLsh{
 		k:         k,
 		l:         l,
@@ -59,6 +80,9 @@ func NewSqlLsh(k, l int, tableName string, db *sql.DB, varFmt func(int) string) 
 	return lsh, nil
 }
 
+// Index builds l B-Tree multi-column indexes, each covers a
+// concatenated hash key.
+// This can improve the query performance of the LSH index.
 func (lsh *SqlLsh) Index() error {
 	tx, err := lsh.db.Begin()
 	if err != nil {
@@ -79,6 +103,8 @@ func (lsh *SqlLsh) Index() error {
 	return nil
 }
 
+// Insert appends a new Signature with id to the table.
+// The size of the new Signature must equal to k*l.
 func (lsh *SqlLsh) Insert(id int, sig Signature) error {
 	if len(sig) != lsh.k*lsh.l {
 		return errors.New("Signature size mismatch")
@@ -106,6 +132,11 @@ func (lsh *SqlLsh) Insert(id int, sig Signature) error {
 	return nil
 }
 
+// BatchInsert appends a list of Signatures to the table.
+// Each id in the list ids corresponds to the ID of the Signature at the
+// same position.
+// BatchInsert is more efficient than Insert for inserting multiple
+// Signatures at the same time.
 func (lsh *SqlLsh) BatchInsert(ids []int, sigs []Signature) error {
 	if len(sigs) != len(ids) {
 		return errors.New("Number of signatures and ids mismatch")
@@ -138,6 +169,10 @@ func (lsh *SqlLsh) BatchInsert(ids []int, sigs []Signature) error {
 	return nil
 }
 
+// Query finds the IDs of the Signatures that have at least one
+// hash key collison with the query Signature, then writes the
+// IDs to a given output channel.
+// The caller is responsible for closing the channel.
 func (lsh *SqlLsh) Query(sig Signature, out chan int) error {
 	if len(sig) != lsh.k*lsh.l {
 		return errors.New("Signature size mismatch")
@@ -150,7 +185,6 @@ func (lsh *SqlLsh) Query(sig Signature, out chan int) error {
 	if err != nil {
 		return err
 	}
-	set := make(map[int]bool)
 	defer rows.Close()
 	for rows.Next() {
 		var id int
@@ -158,11 +192,7 @@ func (lsh *SqlLsh) Query(sig Signature, out chan int) error {
 		if err != nil {
 			return err
 		}
-		if _, seen := set[id]; seen {
-			continue
-		}
 		out <- id
-		set[id] = true
 	}
 	err = rows.Err()
 	return err
@@ -215,7 +245,7 @@ func (lsh *SqlLsh) createQueryStmt() (*sql.Stmt, error) {
 		}
 		querySeg[i] = "(" + strings.Join(seg, " AND ") + ")"
 	}
-	stmt, err := lsh.db.Prepare(fmt.Sprintf("SELECT id FROM %s WHERE", lsh.tableName) +
+	stmt, err := lsh.db.Prepare(fmt.Sprintf("SELECT DISTINCT id FROM %s WHERE", lsh.tableName) +
 		strings.Join(querySeg, " OR ") + ";")
 	return stmt, err
 }
