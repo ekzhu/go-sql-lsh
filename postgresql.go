@@ -12,6 +12,7 @@ func NewPostgresLsh(k, l int, tableName string, db *sql.DB) (*SqlLsh, error) {
 	varFmt := func(i int) string {
 		return fmt.Sprintf("$%d", i+1)
 	}
-	lsh, err := newSqlLsh(k, l, tableName, db, varFmt)
+	createIndexFmt := "CREATE INDEX ht_%d ON %s USING HASH ("
+	lsh, err := newSqlLsh(k, l, tableName, db, varFmt, createIndexFmt)
 	return lsh, err
 }

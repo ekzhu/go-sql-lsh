@@ -9,6 +9,7 @@ func NewSqliteLsh(k, l int, tableName string, db *sql.DB) (*SqlLsh, error) {
 	varFmt := func(i int) string {
 		return "?"
 	}
-	lsh, err := newSqlLsh(k, l, tableName, db, varFmt)
+	createIndexFmt := "CREATE INDEX ht_%d ON %s ("
+	lsh, err := newSqlLsh(k, l, tableName, db, varFmt, createIndexFmt)
 	return lsh, err
 }

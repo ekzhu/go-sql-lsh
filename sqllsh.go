@@ -32,23 +32,27 @@ type Signature []uint
 
 // SqlLsh is the entry point to the on-disk LSH index.
 type SqlLsh struct {
-	k          int              // Hash key size
-	l          int              // Number of hash tables, or number of hash keys
-	tableName  string           // Name of the database table used
-	db         *sql.DB          // Database connection
-	varFmt     func(int) string // Database specific formatter for placehoder
-	insertStmt *sql.Stmt
-	queryStmt  *sql.Stmt
-	indexStmts []*sql.Stmt
+	k              int              // Hash key size
+	l              int              // Number of hash tables, or number of hash keys
+	tableName      string           // Name of the database table used
+	db             *sql.DB          // Database connection
+	varFmt         func(int) string // Database specific formatter for placehoder
+	insertStmt     *sql.Stmt
+	queryStmt      *sql.Stmt
+	indexStmts     []*sql.Stmt
+	createIndexFmt string
 }
 
-func newSqlLsh(k, l int, tableName string, db *sql.DB, varFmt func(int) string) (*SqlLsh, error) {
+func newSqlLsh(k, l int, tableName string, db *sql.DB,
+	varFmt func(int) string,
+	createIndexFmt string) (*SqlLsh, error) {
 	lsh := &SqlLsh{
-		k:         k,
-		l:         l,
-		tableName: tableName,
-		db:        db,
-		varFmt:    varFmt,
+		k:              k,
+		l:              l,
+		tableName:      tableName,
+		db:             db,
+		varFmt:         varFmt,
+		createIndexFmt: createIndexFmt,
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -215,7 +219,7 @@ func (lsh *SqlLsh) createIndexStmts() ([]*sql.Stmt, error) {
 		for j := 0; j < lsh.k; j++ {
 			seg[j] = fmt.Sprintf("hv_%d", lsh.k*i+j)
 		}
-		stmt, err := lsh.db.Prepare(fmt.Sprintf("CREATE INDEX ht_%d ON %s (", i, lsh.tableName) +
+		stmt, err := lsh.db.Prepare(fmt.Sprintf(lsh.createIndexFmt, i, lsh.tableName) +
 			strings.Join(seg, ",") + ");")
 		if err != nil {
 			return nil, err

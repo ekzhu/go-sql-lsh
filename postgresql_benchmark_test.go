@@ -71,9 +71,9 @@ func runPostgres(k, l, n, nq int, b *testing.B) {
 		for _ = range out {
 		}
 	}
-	dur = float64(time.Now().Sub(start)) / float64(time.Second)
-	log.Printf("%d queries takes %.4f seconds, average %.4f seconds / query",
-		len(qids), dur, dur/float64(nq))
+	dur = float64(time.Now().Sub(start)) / float64(time.Millisecond)
+	log.Printf("%d queries, average %.4f ms / query",
+		len(qids), dur/float64(nq))
 
 	// Clean up
 	_, err = db.Exec("DROP TABLE IF EXISTS lshtable;")
