@@ -1,5 +1,7 @@
 # go-sql-lsh
 
+[![Build Status](https://travis-ci.org/ekzhu/go-sql-lsh.svg?branch=master)](https://travis-ci.org/ekzhu/go-sql-lsh)
+
 This is an experimental implementation of Locality Sensitive Hashing (LSH)
 index using relational databases.
 This library does not implement any specific locality-sensitive hash function
@@ -8,13 +10,21 @@ but provides a generic storage backend for the hash values.
 See [Documentation](https://godoc.org/github.com/ekzhu/go-sql-lsh)
 for details.
 
+Currently only Sqlite and PostgreSQL are supported.
+
 To install:
 
 ```
 go get github.com/ekzhu/go-sql-lsh
 ```
 
-Currently only Sqlite and PostgreSQL are supported.
+To run the tests and benchmarks, you need to install the Go
+libraries for PostgreSQL and Sqlite3:
+
+```
+go get github.com/lib/pq
+go get github.com/mattn/go-sqlite3
+```
 
 A performance comparison is shown in the table below.
 Numbers are average query times, in millisecond. 
