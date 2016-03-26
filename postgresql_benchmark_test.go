@@ -76,10 +76,10 @@ func runPostgres(k, l, n, nq int, b *testing.B) {
 		len(qids), dur/float64(nq))
 
 	// Clean up
-	_, err = db.Exec("DROP TABLE IF EXISTS lshtable;")
-	if err != nil {
-		b.Fatal(err)
-	}
+	//	_, err = db.Exec("DROP TABLE IF EXISTS lshtable;")
+	//	if err != nil {
+	//		b.Fatal(err)
+	//	}
 }
 
 func BenchmarkPostgresLsh128(b *testing.B) {
