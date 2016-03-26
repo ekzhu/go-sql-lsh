@@ -28,7 +28,7 @@ import (
 // their corresponding locality-sensitive hash functions.
 // Since this library does not include the hash functions,
 // the hash values are used directly as input.
-type Signature []uint
+type Signature []uint64
 
 // SqlLsh is the entry point to the on-disk LSH index.
 type SqlLsh struct {

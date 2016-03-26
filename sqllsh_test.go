@@ -31,7 +31,7 @@ func randomSigs(n, size int, max float64) []Signature {
 	for i := 0; i < n; i++ {
 		sigs[i] = make(Signature, size)
 		for d := 0; d < size; d++ {
-			sigs[i][d] = uint(random.Float64() * max)
+			sigs[i][d] = uint64(random.Float64() * max)
 		}
 	}
 	return sigs
@@ -60,11 +60,11 @@ func Test_Insert(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = lsh.Insert(1, []uint{1, 2, 3})
+	err = lsh.Insert(1, []uint64{1, 2, 3})
 	if err == nil {
 		t.Error("Fail to raise error")
 	}
-	err = lsh.Insert(1, []uint{0, 1, 2, 3})
+	err = lsh.Insert(1, []uint64{0, 1, 2, 3})
 	if err != nil {
 		t.Error(err)
 	}
