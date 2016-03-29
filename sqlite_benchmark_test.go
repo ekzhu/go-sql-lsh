@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"io/ioutil"
 	"log"
-	"math"
 	"math/rand"
 	"os"
 	"testing"
@@ -40,7 +39,7 @@ func runSqlite(k, l, n, nq int, b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	sigs := randomSigs(n, k*l, math.MaxFloat64)
+	sigs := randomSigs(n, k*l)
 	ids := make([]int, len(sigs))
 	for i := range sigs {
 		ids[i] = i

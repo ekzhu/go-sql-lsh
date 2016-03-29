@@ -3,7 +3,6 @@ package sqllsh
 import (
 	"database/sql"
 	"log"
-	"math"
 	"math/rand"
 	"testing"
 	"time"
@@ -31,7 +30,7 @@ func runPostgres(k, l, n, nq int, b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	sigs := randomSigs(n, k*l, math.MaxFloat64)
+	sigs := randomSigs(n, k*l)
 	ids := make([]int, len(sigs))
 	for i := range sigs {
 		ids[i] = i

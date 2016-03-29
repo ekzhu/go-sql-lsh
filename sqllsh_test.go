@@ -3,7 +3,6 @@ package sqllsh
 import (
 	"database/sql"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"os"
 	"testing"
@@ -25,13 +24,13 @@ func removeTempFile(t *testing.T, tempfile *os.File) {
 	}
 }
 
-func randomSigs(n, size int, max float64) []Signature {
+func randomSigs(n, size int) []Signature {
 	random := rand.New(rand.NewSource(1))
 	sigs := make([]Signature, n)
 	for i := 0; i < n; i++ {
 		sigs[i] = make(Signature, size)
 		for d := 0; d < size; d++ {
-			sigs[i][d] = uint64(random.Float64() * max)
+			sigs[i][d] = uint(random.Int63())
 		}
 	}
 	return sigs
@@ -60,11 +59,11 @@ func Test_Insert(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = lsh.Insert(1, []uint64{1, 2, 3})
+	err = lsh.Insert(1, []uint{1, 2, 3})
 	if err == nil {
 		t.Error("Fail to raise error")
 	}
-	err = lsh.Insert(1, []uint64{0, 1, 2, 3})
+	err = lsh.Insert(1, []uint{0, 1, 2, 3})
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,7 +80,7 @@ func Test_Query(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	sigs := randomSigs(10, 4, math.MaxFloat64)
+	sigs := randomSigs(10, 4)
 	for i := range sigs {
 		lsh.Insert(i, sigs[i])
 	}
