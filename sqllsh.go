@@ -116,7 +116,7 @@ func (lsh *SqlLsh) Insert(id int, sig Signature) error {
 	row := make([]interface{}, len(sig)+1)
 	row[0] = interface{}(id)
 	for i := 0; i < len(sig); i++ {
-		row[i+1] = interface{}(sig[i])
+		row[i+1] = interface{}(int(sig[i]))
 	}
 	// Begin transcation for insert
 	tx, err := lsh.db.Begin()
@@ -157,7 +157,7 @@ func (lsh *SqlLsh) BatchInsert(ids []int, sigs []Signature) error {
 		row := make([]interface{}, lsh.l*lsh.k+1)
 		row[0] = interface{}(ids[i])
 		for j := 0; j < len(sigs[i]); j++ {
-			row[j+1] = interface{}(sigs[i][j])
+			row[j+1] = interface{}(int(sigs[i][j]))
 		}
 		_, err = tx.Stmt(lsh.insertStmt).Exec(row...)
 		if err != nil {
@@ -183,7 +183,7 @@ func (lsh *SqlLsh) Query(sig Signature, out chan int) error {
 	}
 	row := make([]interface{}, len(sig))
 	for i := 0; i < len(sig); i++ {
-		row[i] = interface{}(sig[i])
+		row[i] = interface{}(int(sig[i]))
 	}
 	rows, err := lsh.queryStmt.Query(row...)
 	if err != nil {
