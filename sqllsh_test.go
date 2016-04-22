@@ -109,3 +109,38 @@ func Test_Query(t *testing.T) {
 	}
 	removeTempFile(t, f)
 }
+
+func Test_Scan(t *testing.T) {
+	f := creatTempFile(t)
+	db, err := sql.Open("sqlite3", f.Name())
+	if err != nil {
+		t.Error(err)
+	}
+	lsh, err := NewSqliteLsh(2, 2, "lshtable", db)
+	if err != nil {
+		t.Error(err)
+	}
+	sigs := randomSigs(10, 4)
+	for i := range sigs {
+		lsh.Insert(i, sigs[i])
+	}
+	out := make(chan Entry)
+	go func() {
+		err := lsh.Scan(out)
+		if err != nil {
+			t.Fatal(err)
+		}
+		close(out)
+	}()
+	count := 0
+	for e := range out {
+		if !(e.Id > 0 && len(e.Signature) == 4) {
+			t.Fatal("Incorrect signature returned")
+		}
+		count++
+	}
+	if count != len(sigs) {
+		t.Fatal("Did not retrieve the same number inserted")
+	}
+	removeTempFile(t, f)
+}

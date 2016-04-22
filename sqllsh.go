@@ -39,6 +39,7 @@ type SqlLsh struct {
 	varFmt         func(int) string // Database specific formatter for placehoder
 	insertStmt     *sql.Stmt
 	queryStmt      *sql.Stmt
+	scanStmt       *sql.Stmt
 	indexStmts     []*sql.Stmt
 	createIndexFmt string
 }
@@ -74,6 +75,10 @@ func newSqlLsh(k, l int, tableName string, db *sql.DB,
 		return nil, err
 	}
 	lsh.queryStmt, err = lsh.createQueryStmt()
+	if err != nil {
+		return nil, err
+	}
+	lsh.scanStmt, err = lsh.createScanStmt()
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +207,42 @@ func (lsh *SqlLsh) Query(sig Signature, out chan int) error {
 	return err
 }
 
+type Entry struct {
+	Id        int
+	Signature Signature
+}
+
+func (lsh *SqlLsh) Scan(out chan Entry) error {
+	row := make([]interface{}, lsh.k*lsh.l+1)
+	rowPtr := make([]interface{}, lsh.k*lsh.l+1)
+	for i := range row {
+		rowPtr[i] = &row[i]
+	}
+	rows, err := lsh.queryStmt.Query()
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := rows.Scan(rowPtr...); err != nil {
+			return err
+		}
+		id := row[0].(int)
+		sig := make(Signature, len(row)-1)
+		for i := range sig {
+			sig[i] = row[i+1].(uint)
+		}
+		out <- Entry{
+			Id:        id,
+			Signature: sig,
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (lsh *SqlLsh) createTableStr() string {
 	createSeg := make([]string, lsh.k*lsh.l+1)
 	createSeg[0] = "id INTEGER PRIMARY KEY"
@@ -252,4 +293,8 @@ func (lsh *SqlLsh) createQueryStmt() (*sql.Stmt, error) {
 	stmt, err := lsh.db.Prepare(fmt.Sprintf("SELECT DISTINCT id FROM %s WHERE", lsh.tableName) +
 		strings.Join(querySeg, " OR ") + ";")
 	return stmt, err
+}
+
+func (lsh *SqlLsh) createScanStmt() (*sql.Stmt, error) {
+	return lsh.db.Prepare(fmt.Sprintf("SELECT * FROM %s", lsh.tableName))
 }
