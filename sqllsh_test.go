@@ -134,7 +134,7 @@ func Test_Scan(t *testing.T) {
 	}()
 	count := 0
 	for e := range out {
-		if !(e.Id > 0 && len(e.Signature) == 4) {
+		if !(e.Id >= 0 && len(e.Signature) == 4) {
 			t.Fatal("Incorrect signature returned")
 		}
 		count++

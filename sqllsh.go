@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -218,7 +219,7 @@ func (lsh *SqlLsh) Scan(out chan Entry) error {
 	for i := range row {
 		rowPtr[i] = &row[i]
 	}
-	rows, err := lsh.queryStmt.Query()
+	rows, err := lsh.scanStmt.Query()
 	if err != nil {
 		return err
 	}
@@ -227,15 +228,16 @@ func (lsh *SqlLsh) Scan(out chan Entry) error {
 		if err := rows.Scan(rowPtr...); err != nil {
 			return err
 		}
-		id := row[0].(int)
+		id := int(row[0].(int64))
 		sig := make(Signature, len(row)-1)
 		for i := range sig {
-			sig[i] = row[i+1].(uint)
+			sig[i] = uint(row[i+1].(int64))
 		}
 		out <- Entry{
 			Id:        id,
 			Signature: sig,
 		}
+		log.Print(id, sig)
 	}
 	if err := rows.Err(); err != nil {
 		return err
@@ -296,5 +298,5 @@ func (lsh *SqlLsh) createQueryStmt() (*sql.Stmt, error) {
 }
 
 func (lsh *SqlLsh) createScanStmt() (*sql.Stmt, error) {
-	return lsh.db.Prepare(fmt.Sprintf("SELECT * FROM %s", lsh.tableName))
+	return lsh.db.Prepare(fmt.Sprintf("SELECT * FROM %s;", lsh.tableName))
 }
