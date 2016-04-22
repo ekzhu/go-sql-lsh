@@ -21,7 +21,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 )
 
@@ -237,7 +236,6 @@ func (lsh *SqlLsh) Scan(out chan Entry) error {
 			Id:        id,
 			Signature: sig,
 		}
-		log.Print(id, sig)
 	}
 	if err := rows.Err(); err != nil {
 		return err
