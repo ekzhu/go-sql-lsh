@@ -249,7 +249,7 @@ func (lsh *SqlLsh) createTableStr() string {
 	for i := 0; i < lsh.k*lsh.l; i++ {
 		createSeg[i+1] = fmt.Sprintf("hv_%d BIGINT", i)
 	}
-	return fmt.Sprintf("CREATE TABLE %s (\n", lsh.tableName) +
+	return fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n", lsh.tableName) +
 		strings.Join(createSeg, ",\n") + "\n);\n"
 }
 
